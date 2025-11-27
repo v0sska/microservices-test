@@ -1,11 +1,12 @@
 import { UserCreateDto } from '@common/shared/dtos/user/user-create.dto';
 import { UserService } from '@apps/authentication/src/modules/user/services/user.service';
 import { JwtService } from '@nestjs/jwt';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AuthRegisterResponse } from '@common/shared/responses/token.response';
 import { UserResponse } from '@common/shared/responses/user.response';
 import { UserLoginDto } from '@common/shared/dtos/user/user-login.dto';
 import { comparePassword } from '@core/helpers/password.helper';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class AuthService {
@@ -36,13 +37,19 @@ export class AuthService {
     const user = await this.userService.findByEmail(data.email);
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new RpcException({
+        message: 'Invalid credentials',
+        statusCode: 400,
+      });
     }
 
     const compared = await comparePassword(data.password, user.password);
 
     if (!compared) {
-      throw new BadRequestException('Invalid credentials');
+      throw new RpcException({
+        message: 'Invalid credentials',
+        statusCode: 400,
+      });
     }
 
     const payload = { sub: user._id.toString(), email: user.email };
