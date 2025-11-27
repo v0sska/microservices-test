@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: authdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  adminmongo:
+    image: mrvautin/adminmongo
+    container_name: adminmongo
+    restart: always
+    ports:
+      - "1234:1234"
+    environment:
+      HOST: 0.0.0.0
+
+  authentication:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: authentication
+        APP_PORT: 4001
+    container_name: authentication
+    restart: always
+    environment:
+      PORT: 4001
+      MONGO_URI: mongodb://root:example@mongo:27017/authdb?authSource=admin
+    depends_on:
+      - mongo
+    ports:
+      - "4001:4001"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: gateway
+        APP_PORT: 3000
+    container_name: gateway
+    restart: always
+    environment:
+      PORT: 3000
+      AUTHENTICATION_HOST: authentication
+      AUTHENTICATION_PORT: 4001
+    depends_on:
+      - authentication
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo-data:
